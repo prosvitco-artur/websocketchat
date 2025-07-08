@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 // import { FiPower, FiPowerOff, FiTrash2, FiRefreshCw } from 'react-icons/fi';
 import { FaCalendar } from 'react-icons/fa'
@@ -22,6 +22,7 @@ function App() {
     isConnected,
     messages,
     error,
+    currentRoom: wsCurrentRoom, // Отримуємо поточну кімнату з хука
     connect,
     disconnect,
     sendMessage,
@@ -29,6 +30,13 @@ function App() {
     joinRoom,
     clearMessages
   } = useWebSocket(WEBSOCKET_URL);
+
+  // Синхронізуємо локальний стан з WebSocket хуком
+  useEffect(() => {
+    if (wsCurrentRoom && wsCurrentRoom !== currentRoom) {
+      setCurrentRoom(wsCurrentRoom);
+    }
+  }, [wsCurrentRoom, currentRoom]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {

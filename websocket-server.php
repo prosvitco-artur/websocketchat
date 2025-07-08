@@ -7,9 +7,8 @@ use Ratchet\Http\HttpServer;
 use Ratchet\WebSocket\WsServer;
 use WebSocket\WebSocketHandler;
 
-// Перевіряємо аргументи командного рядка
 $port = 8080;
-$host = '0.0.0.0'; // Змінюємо на 0.0.0.0 для доступу з інших пристроїв
+$host = '0.0.0.0';
 $dev = false;
 
 foreach ($argv as $arg) {
@@ -41,7 +40,6 @@ $server = IoServer::factory(
 
 echo "🚀 WebSocket сервер запущено на {$host}:{$port}\n";
 echo "📡 URL: ws://{$host}:{$port}\n";
-echo "🌐 Веб-клієнт: http://websocket-server.lndo.site\n";
 echo "⏹️  Для зупинки натисніть Ctrl+C\n\n";
 
 if ($dev) {

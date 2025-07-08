@@ -9,12 +9,14 @@ class WebSocketHandler implements MessageComponentInterface
 {
     protected $clients;
     protected $rooms;
+    protected $clientRooms; // Додаємо відстеження поточної кімнати клієнта
 
     public function __construct()
     {
         $this->clients = new \SplObjectStorage;
         $this->rooms = [];
-        echo "WebSocket сервер запущено!\n";
+        $this->clientRooms = []; // Клієнт -> поточна кімната
+        echo "WebSocket сервер запущено!!!!\n";
     }
 
     public function onOpen(ConnectionInterface $conn)
@@ -81,6 +83,9 @@ class WebSocketHandler implements MessageComponentInterface
         // Видаляємо клієнта з усіх кімнат
         $this->removeClientFromAllRooms($conn);
         
+        // Видаляємо з відстеження кімнат
+        unset($this->clientRooms[$conn->resourceId]);
+        
         // Повідомляємо інших клієнтів
         $this->broadcastSystemMessage("Клієнт {$conn->resourceId} відключився. Всього клієнтів: " . count($this->clients));
     }
@@ -93,17 +98,23 @@ class WebSocketHandler implements MessageComponentInterface
 
     protected function handleChatMessage(ConnectionInterface $from, $data)
     {
-        // Відправляємо повідомлення всім клієнтам, крім відправника
-        foreach ($this->clients as $client) {
-            if ($from !== $client) {
-                $this->sendToClient($client, $data);
+        // Отримуємо поточну кімнату клієнта
+        $currentRoom = $this->clientRooms[$from->resourceId] ?? 'general';
+        
+        // Відправляємо повідомлення тільки клієнтам в тій самій кімнаті
+        if (isset($this->rooms[$currentRoom])) {
+            foreach ($this->rooms[$currentRoom] as $client) {
+                if ($from !== $client) {
+                    $this->sendToClient($client, $data);
+                }
             }
         }
 
-        // Підтвердження відправнику
+        // Підтвердження доставки відправнику
         $this->sendToClient($from, [
-            'type' => 'ack',
-            'message' => 'Повідомлення доставлено',
+            'type' => 'delivery_status',
+            'messageId' => $data['messageId'] ?? uniqid(),
+            'status' => 'delivered',
             'timestamp' => date('Y-m-d H:i:s')
         ]);
     }
@@ -112,11 +123,19 @@ class WebSocketHandler implements MessageComponentInterface
     {
         $roomName = $data['room'] ?? 'general';
         
+        // Видаляємо клієнта з попередньої кімнати
+        $previousRoom = $this->clientRooms[$client->resourceId] ?? null;
+        if ($previousRoom && isset($this->rooms[$previousRoom])) {
+            $this->rooms[$previousRoom]->detach($client);
+        }
+        
+        // Додаємо клієнта до нової кімнати
         if (!isset($this->rooms[$roomName])) {
             $this->rooms[$roomName] = new \SplObjectStorage;
         }
         
         $this->rooms[$roomName]->attach($client);
+        $this->clientRooms[$client->resourceId] = $roomName;
         
         $this->sendToClient($client, [
             'type' => 'room_joined',
@@ -146,6 +165,11 @@ class WebSocketHandler implements MessageComponentInterface
         if (isset($this->rooms[$roomName])) {
             $this->rooms[$roomName]->detach($client);
             
+            // Видаляємо з відстеження кімнат
+            if ($this->clientRooms[$client->resourceId] === $roomName) {
+                unset($this->clientRooms[$client->resourceId]);
+            }
+            
             $this->sendToClient($client, [
                 'type' => 'room_left',
                 'room' => $roomName,
@@ -173,10 +197,11 @@ class WebSocketHandler implements MessageComponentInterface
             }
         }
         
-        // Підтвердження відправнику
+        // Підтвердження доставки приватного повідомлення
         $this->sendToClient($from, [
-            'type' => 'ack',
-            'message' => 'Приватне повідомлення доставлено',
+            'type' => 'delivery_status',
+            'messageId' => $data['messageId'] ?? uniqid(),
+            'status' => 'delivered',
             'timestamp' => date('Y-m-d H:i:s')
         ]);
     }
@@ -206,6 +231,9 @@ class WebSocketHandler implements MessageComponentInterface
                 $roomClients->detach($client);
             }
         }
+        
+        // Видаляємо з відстеження кімнат
+        unset($this->clientRooms[$client->resourceId]);
     }
 
     public function getConnectedClientsCount()

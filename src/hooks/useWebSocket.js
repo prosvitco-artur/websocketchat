@@ -4,6 +4,7 @@ export const useWebSocket = (url) => {
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
+  const [currentRoom, setCurrentRoom] = useState('general'); // Додаємо відстеження поточної кімнати
   const socketRef = useRef(null);
 
   const connect = useCallback(() => {
@@ -24,11 +25,21 @@ export const useWebSocket = (url) => {
       socketRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          setMessages(prev => [...prev, {
-            id: Date.now(),
-            ...data,
-            timestamp: data.timestamp || new Date().toISOString()
-          }]);
+          
+          if (data.type === 'delivery_status') {
+            // Оновлюємо статус доставки для конкретного повідомлення
+            setMessages(prev => prev.map(msg => 
+              msg.id === data.messageId 
+                ? { ...msg, deliveryStatus: data.status }
+                : msg
+            ));
+          } else {
+            setMessages(prev => [...prev, {
+              id: Date.now(),
+              ...data,
+              timestamp: data.timestamp || new Date().toISOString()
+            }]);
+          }
         } catch (e) {
           setMessages(prev => [...prev, {
             id: Date.now(),
@@ -70,43 +81,50 @@ export const useWebSocket = (url) => {
 
   const sendMessage = useCallback((message, type = 'message') => {
     if (socketRef.current && isConnected) {
+      const messageId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
       const data = {
         type,
         content: message,
+        messageId,
+        room: currentRoom, // Додаємо інформацію про кімнату
         timestamp: new Date().toISOString()
       };
       
       socketRef.current.send(JSON.stringify(data));
       
-      // Додаємо повідомлення відправника
+      // Додаємо повідомлення відправника з індикатором доставки
       setMessages(prev => [...prev, {
-        id: Date.now(),
+        id: messageId,
         type: 'own',
-        content: `📤 ${message}`,
-        timestamp: new Date().toISOString()
+        content: message,
+        timestamp: new Date().toISOString(),
+        deliveryStatus: 'sending' // pending, delivered, failed
       }]);
       
       return true;
     }
     return false;
-  }, [isConnected]);
+  }, [isConnected, currentRoom]); // Додаємо currentRoom в залежності
 
   const sendPrivateMessage = useCallback((message, targetId) => {
     if (socketRef.current && isConnected) {
+      const messageId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
       const data = {
         type: 'private_message',
         to: targetId,
         content: message,
+        messageId,
         timestamp: new Date().toISOString()
       };
       
       socketRef.current.send(JSON.stringify(data));
       
       setMessages(prev => [...prev, {
-        id: Date.now(),
+        id: messageId,
         type: 'own',
         content: `🔒 Приватно до ${targetId}: ${message}`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        deliveryStatus: 'sending'
       }]);
       
       return true;
@@ -123,6 +141,7 @@ export const useWebSocket = (url) => {
       };
       
       socketRef.current.send(JSON.stringify(data));
+      setCurrentRoom(roomName); // Оновлюємо поточну кімнату
       return true;
     }
     return false;
@@ -171,6 +190,7 @@ export const useWebSocket = (url) => {
     isConnected,
     messages,
     error,
+    currentRoom, // Експортуємо поточну кімнату
     connect,
     disconnect,
     sendMessage,

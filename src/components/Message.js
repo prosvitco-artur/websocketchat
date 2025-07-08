@@ -14,8 +14,6 @@ const Message = ({ message }) => {
         return 'message-bubble message-private';
       case 'welcome':
         return 'message-bubble message-system';
-      case 'ack':
-        return 'message-bubble message-system';
       default:
         return 'message-bubble message-other';
     }
@@ -25,8 +23,6 @@ const Message = ({ message }) => {
     switch (message.type) {
       case 'welcome':
         return '🎉';
-      case 'ack':
-        return '✅';
       case 'system':
         return 'ℹ️';
       case 'private_message':
@@ -35,6 +31,36 @@ const Message = ({ message }) => {
         return '📨';
       default:
         return '💬';
+    }
+  };
+
+  const getDeliveryStatusIcon = () => {
+    if (message.type !== 'own') return null;
+    
+    switch (message.deliveryStatus) {
+      case 'sending':
+        return '⏳';
+      case 'delivered':
+        return '✅';
+      case 'failed':
+        return '❌';
+      default:
+        return '⏳';
+    }
+  };
+
+  const getDeliveryStatusColor = () => {
+    if (message.type !== 'own') return '';
+    
+    switch (message.deliveryStatus) {
+      case 'sending':
+        return 'text-yellow-400';
+      case 'delivered':
+        return 'text-green-400';
+      case 'failed':
+        return 'text-red-400';
+      default:
+        return 'text-gray-400';
     }
   };
 
@@ -60,16 +86,25 @@ const Message = ({ message }) => {
             <div className="text-sm font-medium">
               {message.content || message.message}
             </div>
-            {message.timestamp && (
-              <div className="text-xs opacity-60 mt-1">
-                {formatTimestamp(message.timestamp)}
+            <div className="flex items-center justify-between mt-1">
+              <div className="flex items-center gap-2">
+                {message.timestamp && (
+                  <div className="text-xs opacity-60">
+                    {formatTimestamp(message.timestamp)}
+                  </div>
+                )}
+                {message.from && message.type !== 'own' && (
+                  <div className="text-xs opacity-60">
+                    Від: {message.from}
+                  </div>
+                )}
               </div>
-            )}
-            {message.from && message.type !== 'own' && (
-              <div className="text-xs opacity-60 mt-1">
-                Від: {message.from}
-              </div>
-            )}
+              {message.type === 'own' && (
+                <div className={`text-xs ${getDeliveryStatusColor()}`}>
+                  {getDeliveryStatusIcon()}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
