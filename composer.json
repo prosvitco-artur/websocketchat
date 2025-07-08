@@ -1,0 +1,19 @@
+{
+    "name": "websocket/php-server",
+    "description": "PHP WebSocket Server",
+    "type": "project",
+    "require": {
+        "php": ">=8.0",
+        "cboden/ratchet": "^0.4.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "WebSocket\\": "src/"
+        }
+    },
+    "scripts": {
+        "start": "php websocket-server.php",
+        "dev": "php websocket-server.php --dev"
+    },
+    "minimum-stability": "stable"
+} 

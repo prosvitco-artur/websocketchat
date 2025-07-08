@@ -1,0 +1,22 @@
+name: websocket-server
+recipe: lamp
+config:
+  webroot: ./examples
+  php: '8.2'
+
+services:
+  appserver:
+    type: php:8.2
+    webroot: ./examples
+    ssl: false
+    port: 8080
+
+tooling:
+  websocket:
+    service: appserver
+    description: Запустити WebSocket сервер
+    cmd: php websocket-server.php
+
+proxy:
+  appserver:
+    - websocket-server.lndo.site:8080 

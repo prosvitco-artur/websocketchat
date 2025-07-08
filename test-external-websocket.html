@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест WebSocket зовнішнього підключення</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        #messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f9f9f9;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 Тест WebSocket зовнішнього підключення</h1>
+        
+        <div class="status disconnected" id="status">
+            Відключено
+        </div>
+        
+        <div>
+            <label for="serverUrl">URL сервера:</label>
+            <input type="text" id="serverUrl" value="ws://192.168.31.36:8080" placeholder="ws://IP:PORT">
+            <button onclick="connect()" id="connectBtn">Підключитися</button>
+            <button onclick="disconnect()" id="disconnectBtn" disabled>Відключитися</button>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <label for="message">Повідомлення:</label>
+            <input type="text" id="message" placeholder="Введіть повідомлення">
+            <button onclick="sendMessage()" id="sendBtn" disabled>Надіслати</button>
+        </div>
+        
+        <h3>📨 Повідомлення:</h3>
+        <div id="messages"></div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="clearMessages()">Очистити повідомлення</button>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const serverUrlInput = document.getElementById('serverUrl');
+        const messageInput = document.getElementById('message');
+
+        function updateStatus(message, className) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${className}`;
+        }
+
+        function addMessage(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const messageElement = document.createElement('div');
+            messageElement.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            messageElement.style.color = type === 'error' ? 'red' : type === 'success' ? 'green' : 'black';
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function connect() {
+            const serverUrl = serverUrlInput.value.trim();
+            if (!serverUrl) {
+                alert('Будь ласка, введіть URL сервера');
+                return;
+            }
+
+            updateStatus('Підключення...', 'connecting');
+            addMessage(`Спроба підключення до ${serverUrl}...`);
+
+            try {
+                socket = new WebSocket(serverUrl);
+
+                socket.onopen = function(event) {
+                    updateStatus('Підключено', 'connected');
+                    addMessage('✅ Успішно підключено до сервера!', 'success');
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    sendBtn.disabled = false;
+                };
+
+                socket.onmessage = function(event) {
+                    addMessage(`📨 Отримано: ${event.data}`, 'success');
+                };
+
+                socket.onclose = function(event) {
+                    updateStatus('Відключено', 'disconnected');
+                    addMessage(`❌ З'єднання закрито. Код: ${event.code}, Причина: ${event.reason}`, 'error');
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                };
+
+                socket.onerror = function(error) {
+                    updateStatus('Помилка підключення', 'disconnected');
+                    addMessage(`❌ Помилка підключення: ${error}`, 'error');
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                };
+
+            } catch (error) {
+                updateStatus('Помилка підключення', 'disconnected');
+                addMessage(`❌ Помилка: ${error.message}`, 'error');
+            }
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.close();
+                socket = null;
+            }
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) {
+                alert('Будь ласка, введіть повідомлення');
+                return;
+            }
+
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(message);
+                addMessage(`📤 Надіслано: ${message}`);
+                messageInput.value = '';
+            } else {
+                addMessage('❌ Неможливо надіслати повідомлення - немає з\'єднання', 'error');
+            }
+        }
+
+        function clearMessages() {
+            messagesDiv.innerHTML = '';
+        }
+
+        // Дозволяємо надсилати повідомлення натисканням Enter
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Додаємо інформацію про поточну IP адресу
+        addMessage('ℹ️ Для підключення з іншого пристрою використовуйте IP адресу цього комп\'ютера');
+        addMessage('ℹ️ Переконайтеся, що порт 8080 відкритий у брандмауері');
+    </script>
+</body>
+</html> 
