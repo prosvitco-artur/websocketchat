@@ -4,7 +4,8 @@
     "type": "project",
     "require": {
         "php": ">=8.0",
-        "cboden/ratchet": "^0.4.4"
+        "cboden/ratchet": "^0.4.4",
+        "symfony/var-dumper": "^7.3"
     },
     "autoload": {
         "psr-4": {
@@ -16,4 +17,4 @@
         "dev": "php websocket-server.php --dev"
     },
     "minimum-stability": "stable"
-} 
+}
