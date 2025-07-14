@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// import { FiPower, FiPowerOff, FiTrash2, FiRefreshCw } from 'react-icons/fi';
-import { FaCalendar } from 'react-icons/fa'
+// import { FiPower, FaPowerOff, FiTrash2, FiRefreshCw } from 'react-icons/fi';
+import { LuPowerOff } from 'react-icons/lu'
+import { MdOutlineConnectWithoutContact } from "react-icons/md";
+import { FaTrash } from 'react-icons/fa'
+
 
 import { useWebSocket } from './hooks/useWebSocket';
 import ConnectionStatus from './components/ConnectionStatus';
@@ -143,7 +146,7 @@ function App() {
                     whileTap={{ scale: 0.9 }}
                     title="Очистити повідомлення"
                   >
-                    <FaCalendar size={16} />
+                    <FaTrash size={16} />
                   </motion.button>
                   <motion.button
                     onClick={isConnected ? disconnect : connect}
@@ -156,7 +159,7 @@ function App() {
                     whileTap={{ scale: 0.9 }}
                     title={isConnected ? 'Відключитися' : 'Підключитися'}
                   >
-                    {isConnected ? <FaCalendar size={16} /> : <FaCalendar size={16} />}
+                    {isConnected ? <LuPowerOff size={16} /> : <MdOutlineConnectWithoutContact size={16} />}
                   </motion.button>
                 </div>
               </div>
