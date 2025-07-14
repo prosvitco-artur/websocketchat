@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiSend, FiSmile } from 'react-icons/fi';
 
-const MessageInput = ({ onSendMessage, disabled, onTyping }) => {
+const MessageInput = ({ onSendMessage, disabled, onTyping, username }) => {
   const [message, setMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
@@ -10,7 +10,7 @@ const MessageInput = ({ onSendMessage, disabled, onTyping }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (message.trim() && !disabled) {
+    if (message.trim() && !disabled && username) {
       onSendMessage(message.trim());
       setMessage('');
     }
@@ -38,8 +38,8 @@ const MessageInput = ({ onSendMessage, disabled, onTyping }) => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Введіть повідомлення..."
-            disabled={disabled}
+            placeholder={username ? "Введіть повідомлення..." : "Спочатку вкажіть ваше ім'я..."}
+            disabled={disabled || !username}
             className="input-field w-full pr-12"
           />
           <button
@@ -53,7 +53,7 @@ const MessageInput = ({ onSendMessage, disabled, onTyping }) => {
         </div>
         <motion.button
           type="submit"
-          disabled={disabled || !message.trim()}
+          disabled={disabled || !message.trim() || !username}
           className="btn-primary"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FiWifi, FiWifiOff, FiActivity } from 'react-icons/fi';
 
-const ConnectionStatus = ({ isConnected, error }) => {
+const ConnectionStatus = ({ isConnected, error, username }) => {
   const getStatusColor = () => {
     if (error) return 'bg-red-500/20 border-red-500 text-red-300';
     if (isConnected) return 'bg-green-500/20 border-green-500 text-green-300';
@@ -40,10 +40,15 @@ const ConnectionStatus = ({ isConnected, error }) => {
       >
         {getStatusIcon()}
       </motion.div>
-      <div>
+      <div className="flex-1">
         <div className="font-medium">{getStatusText()}</div>
         {error && (
           <div className="text-xs opacity-80 mt-1">{error}</div>
+        )}
+        {username && (
+          <div className="text-xs opacity-80 mt-1">
+            👤 {username}
+          </div>
         )}
       </div>
     </motion.div>

@@ -4,8 +4,16 @@ export const useWebSocket = (url) => {
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
-  const [currentRoom, setCurrentRoom] = useState('general'); // Додаємо відстеження поточної кімнати
+  const [currentRoom, setCurrentRoom] = useState('general');
+  const [username, setUsername] = useState(() => {
+    return localStorage.getItem('chatUsername') || '';
+  });
   const socketRef = useRef(null);
+
+  const setUsernameWithStorage = useCallback((newUsername) => {
+    setUsername(newUsername);
+    localStorage.setItem('chatUsername', newUsername);
+  }, []);
 
   const connect = useCallback(() => {
     try {
@@ -87,6 +95,7 @@ export const useWebSocket = (url) => {
         content: message,
         messageId,
         room: currentRoom, // Додаємо інформацію про кімнату
+        username: username, // Додаємо ім'я користувача
         timestamp: new Date().toISOString()
       };
       
@@ -97,6 +106,7 @@ export const useWebSocket = (url) => {
         id: messageId,
         type: 'own',
         content: message,
+        username: username,
         timestamp: new Date().toISOString(),
         deliveryStatus: 'sending' // pending, delivered, failed
       }]);
@@ -104,7 +114,7 @@ export const useWebSocket = (url) => {
       return true;
     }
     return false;
-  }, [isConnected, currentRoom]); // Додаємо currentRoom в залежності
+  }, [isConnected, currentRoom, username]); // Додаємо username в залежності
 
   const sendPrivateMessage = useCallback((message, targetId) => {
     if (socketRef.current && isConnected) {
@@ -114,6 +124,7 @@ export const useWebSocket = (url) => {
         to: targetId,
         content: message,
         messageId,
+        username: username,
         timestamp: new Date().toISOString()
       };
       
@@ -123,6 +134,7 @@ export const useWebSocket = (url) => {
         id: messageId,
         type: 'own',
         content: `🔒 Приватно до ${targetId}: ${message}`,
+        username: username,
         timestamp: new Date().toISOString(),
         deliveryStatus: 'sending'
       }]);
@@ -130,13 +142,14 @@ export const useWebSocket = (url) => {
       return true;
     }
     return false;
-  }, [isConnected]);
+  }, [isConnected, username]);
 
   const joinRoom = useCallback((roomName) => {
     if (socketRef.current && isConnected) {
       const data = {
         type: 'join_room',
         room: roomName,
+        username: username,
         timestamp: new Date().toISOString()
       };
       
@@ -145,7 +158,7 @@ export const useWebSocket = (url) => {
       return true;
     }
     return false;
-  }, [isConnected]);
+  }, [isConnected, username]);
 
   const leaveRoom = useCallback((roomName) => {
     if (socketRef.current && isConnected) {
@@ -191,6 +204,8 @@ export const useWebSocket = (url) => {
     messages,
     error,
     currentRoom, // Експортуємо поточну кімнату
+    username, // Експортуємо ім'я користувача
+    setUsername: setUsernameWithStorage, // Експортуємо функцію для встановлення імені з збереженням
     connect,
     disconnect,
     sendMessage,

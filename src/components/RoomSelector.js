@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiHash, FiPlus, FiX } from 'react-icons/fi';
 
-const RoomSelector = ({ currentRoom, onRoomChange, onJoinRoom }) => {
+const RoomSelector = ({ currentRoom, onRoomChange, onJoinRoom, username }) => {
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
 
@@ -15,7 +15,7 @@ const RoomSelector = ({ currentRoom, onRoomChange, onJoinRoom }) => {
 
   const handleCreateRoom = (e) => {
     e.preventDefault();
-    if (newRoomName.trim()) {
+    if (newRoomName.trim() && username) {
       onJoinRoom(newRoomName.trim());
       setNewRoomName('');
       setShowCreateRoom(false);
@@ -56,7 +56,7 @@ const RoomSelector = ({ currentRoom, onRoomChange, onJoinRoom }) => {
             />
             <button
               type="submit"
-              disabled={!newRoomName.trim()}
+              disabled={!newRoomName.trim() || !username}
               className="btn-primary px-4 py-2 text-sm"
             >
               Створити
@@ -73,18 +73,26 @@ const RoomSelector = ({ currentRoom, onRoomChange, onJoinRoom }) => {
       )}
 
       {/* Room List */}
+      {!username && (
+        <div className="text-xs text-yellow-300 bg-yellow-500/20 p-2 rounded-lg mb-3">
+          ⚠️ Спочатку вкажіть ваше ім'я для приєднання до кімнат
+        </div>
+      )}
       <div className="space-y-2">
         {defaultRooms.map((room) => (
           <motion.button
             key={room.id}
-            onClick={() => onRoomChange(room.id)}
+            onClick={() => username ? onRoomChange(room.id) : null}
+            disabled={!username}
             className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
               currentRoom === room.id
                 ? 'bg-primary-500/30 border border-primary-400 text-primary-200'
-                : 'bg-white/10 hover:bg-white/20 text-white'
+                : username 
+                  ? 'bg-white/10 hover:bg-white/20 text-white'
+                  : 'bg-white/5 text-white/40 cursor-not-allowed'
             }`}
-            whileHover={{ x: 5 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={username ? { x: 5 } : {}}
+            whileTap={username ? { scale: 0.95 } : {}}
           >
             <FiHash size={16} />
             <span className="font-medium">#{room.name}</span>

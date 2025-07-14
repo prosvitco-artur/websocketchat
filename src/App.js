@@ -12,6 +12,7 @@ import Message from './components/Message';
 import MessageInput from './components/MessageInput';
 import RoomSelector from './components/RoomSelector';
 import UsersList from './components/UsersList';
+import UserNameInput from './components/UserNameInput';
 
 const WEBSOCKET_URL = 'ws://localhost:8080';
 
@@ -26,6 +27,8 @@ function App() {
     messages,
     error,
     currentRoom: wsCurrentRoom, // Отримуємо поточну кімнату з хука
+    username,
+    setUsername,
     connect,
     disconnect,
     sendMessage,
@@ -33,6 +36,15 @@ function App() {
     joinRoom,
     clearMessages
   } = useWebSocket(WEBSOCKET_URL);
+
+  // Функція для встановлення імені користувача з повідомленням
+  const handleSetUsername = (newUsername) => {
+    setUsername(newUsername);
+    // Додаємо системне повідомлення про вхід користувача
+    if (isConnected) {
+      sendMessage(`👋 ${newUsername} приєднався до чату!`, 'system');
+    }
+  };
 
   // Синхронізуємо локальний стан з WebSocket хуком
   useEffect(() => {
@@ -48,7 +60,7 @@ function App() {
 
   // Handle room changes
   const handleRoomChange = (roomName) => {
-    if (currentRoom !== roomName) {
+    if (currentRoom !== roomName && username) {
       setCurrentRoom(roomName);
       joinRoom(roomName);
     }
@@ -102,9 +114,17 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
+            {/* User Name Input */}
+            <div className="card p-6">
+              <UserNameInput
+                currentUsername={username}
+                onSetUsername={handleSetUsername}
+              />
+            </div>
+
             {/* Connection Status */}
             <div className="card p-6">
-              <ConnectionStatus isConnected={isConnected} error={error} />
+              <ConnectionStatus isConnected={isConnected} error={error} username={username} />
             </div>
 
             {/* Room Selector */}
@@ -113,6 +133,7 @@ function App() {
                 currentRoom={currentRoom}
                 onRoomChange={handleRoomChange}
                 onJoinRoom={joinRoom}
+                username={username}
               />
             </div>
 
@@ -202,6 +223,7 @@ function App() {
                 onSendMessage={sendMessage}
                 disabled={!isConnected}
                 onTyping={handleTyping}
+                username={username}
               />
             </div>
           </div>

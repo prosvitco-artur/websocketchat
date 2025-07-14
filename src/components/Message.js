@@ -93,9 +93,14 @@ const Message = ({ message }) => {
                     {formatTimestamp(message.timestamp)}
                   </div>
                 )}
-                {message.from && message.type !== 'own' && (
+                {message.username && message.type !== 'own' && (
                   <div className="text-xs opacity-60">
-                    Від: {message.from}
+                    Від: {message.username}
+                  </div>
+                )}
+                {message.username && message.type === 'own' && (
+                  <div className="text-xs opacity-60">
+                    Ви: {message.username}
                   </div>
                 )}
               </div>
