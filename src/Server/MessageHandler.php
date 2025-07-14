@@ -197,9 +197,15 @@ class MessageHandler
     {
         $users = $this->userManager->getAllUsers($this->clients);
         
-        // Додаємо інформацію про кімнати
         foreach ($users as &$user) {
-            $user['room'] = $this->roomManager->getClientRoom($client);
+            $userClient = null;
+            foreach ($this->clients as $c) {
+                if ($c->resourceId == $user['id']) {
+                    $userClient = $c;
+                    break;
+                }
+            }
+            $user['room'] = $userClient ? $this->roomManager->getClientRoom($userClient) : 'general';
         }
         
         return [

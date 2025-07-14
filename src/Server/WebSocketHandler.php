@@ -29,6 +29,10 @@ class WebSocketHandler implements MessageComponentInterface
         // Ініціалізуємо message handler
         $this->messageHandler = new MessageHandler($this->roomManager, $this->userManager, $this->clients);
         
+        // Автоматично додаємо клієнта до кімнати general
+        $this->roomManager->joinRoom($conn, 'general');
+        echo "Клієнт {$conn->resourceId} доданий до кімнати general\n";
+        
         // Відправляємо привітання
         $this->sendToClient($conn, [
             'type' => 'welcome',
@@ -44,15 +48,13 @@ class WebSocketHandler implements MessageComponentInterface
     public function onMessage(ConnectionInterface $from, $msg)
     {
         echo sprintf('Повідомлення від %d: %s' . "\n", $from->resourceId, $msg);
-
-        // Парсимо JSON повідомлення
         $data = json_decode($msg, true);
+        // echo $data;
         
         if (!$data) {
             $data = ['type' => 'message', 'content' => $msg];
         }
 
-        // Обробляємо повідомлення через MessageHandler
         $result = $this->messageHandler->handleMessage($from, $data);
         
         if ($result) {
@@ -62,21 +64,16 @@ class WebSocketHandler implements MessageComponentInterface
 
     public function onClose(ConnectionInterface $conn)
     {
-        // З'єднання закрито
         $this->clients->detach($conn);
         echo "З'єднання {$conn->resourceId} закрито\n";
         
-        // Видаляємо клієнта з усіх кімнат
         $this->roomManager->removeClientFromAllRooms($conn);
         
-        // Видаляємо користувача
         $this->userManager->removeUser($conn);
         
-        // Повідомляємо інших клієнтів
         $username = $this->userManager->getUsername($conn);
         $this->broadcastSystemMessage("{$username} відключився. Всього клієнтів: " . count($this->clients));
         
-        // Відправляємо оновлений список користувачів
         $this->broadcastUsersList();
     }
 
@@ -90,22 +87,17 @@ class WebSocketHandler implements MessageComponentInterface
     {
         switch ($result['type']) {
             case 'message':
-                // Відправляємо повідомлення отримувачам
                 foreach ($result['recipients'] as $recipient) {
                     $this->sendToClient($recipient, $result['data']);
                 }
-                // Підтвердження доставки відправнику
                 $this->sendToClient($from, $result['delivery_status']);
                 break;
                 
             case 'room_joined':
-                // Повідомлення для клієнта
                 $this->sendToClient($from, $result['client_message']);
-                // Повідомлення для інших учасників кімнати
                 foreach ($result['notifications'] as $notification) {
                     $this->sendToClient($notification['client'], $notification['data']);
                 }
-                // Відправляємо оновлений список користувачів
                 $this->broadcastUsersList();
                 break;
                 
@@ -155,9 +147,17 @@ class WebSocketHandler implements MessageComponentInterface
     {
         $users = $this->userManager->getAllUsers($this->clients);
         
-        // Додаємо інформацію про кімнати
+        // Додаємо інформацію про кімнати для кожного користувача
         foreach ($users as &$user) {
-            $user['room'] = $this->roomManager->getClientRoom($this->clients->current());
+            // Знаходимо клієнта за ID
+            $userClient = null;
+            foreach ($this->clients as $c) {
+                if ($c->resourceId == $user['id']) {
+                    $userClient = $c;
+                    break;
+                }
+            }
+            $user['room'] = $userClient ? $this->roomManager->getClientRoom($userClient) : 'general';
         }
         
         $data = [

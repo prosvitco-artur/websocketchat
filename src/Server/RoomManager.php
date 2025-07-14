@@ -30,7 +30,6 @@ class RoomManager
         
         $this->rooms[$roomName]->attach($client);
         $this->clientRooms[$client->resourceId] = $roomName;
-        
         return $roomName;
     }
 
@@ -57,7 +56,8 @@ class RoomManager
 
     public function getRoomClients($roomName)
     {
-        return $this->rooms[$roomName] ?? new \SplObjectStorage;
+        $roomClients = $this->rooms[$roomName] ?? new \SplObjectStorage;
+        return $roomClients;
     }
 
     public function removeClientFromAllRooms(ConnectionInterface $client)
