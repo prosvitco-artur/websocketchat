@@ -40,9 +40,16 @@ const UsersList = ({ users = [], onSendPrivateMessage }) => {
               className="flex items-center gap-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
             >
               <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-              <span className="text-sm font-medium flex-1">
-                Користувач {user.id}
-              </span>
+              <div className="flex-1">
+                <div className="text-sm font-medium">
+                  {user.username || `Користувач ${user.id}`}
+                </div>
+                {user.room && (
+                  <div className="text-xs text-white/60">
+                    #{user.room}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => setSelectedUser(user.id)}
                 className="p-1 rounded hover:bg-white/20 transition-colors"
@@ -64,7 +71,7 @@ const UsersList = ({ users = [], onSendPrivateMessage }) => {
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">
-              Приватне повідомлення до {selectedUser}
+              Приватне повідомлення до {users.find(u => u.id === selectedUser)?.username || selectedUser}
             </span>
             <button
               onClick={() => setSelectedUser('')}

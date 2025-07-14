@@ -10,12 +10,14 @@ class WebSocketHandler implements MessageComponentInterface
     protected $clients;
     protected $rooms;
     protected $clientRooms; // Додаємо відстеження поточної кімнати клієнта
+    protected $clientUsernames; // Додаємо відстеження імен користувачів
 
     public function __construct()
     {
         $this->clients = new \SplObjectStorage;
         $this->rooms = [];
         $this->clientRooms = []; // Клієнт -> поточна кімната
+        $this->clientUsernames = []; // Клієнт -> ім'я користувача
         echo "WebSocket сервер запущено!!!!\n";
     }
 
@@ -66,6 +68,12 @@ class WebSocketHandler implements MessageComponentInterface
             case 'private_message':
                 $this->handlePrivateMessage($from, $data);
                 break;
+            case 'set_username':
+                $this->handleSetUsername($from, $data);
+                break;
+            case 'get_users':
+                $this->handleGetUsers($from, $data);
+                break;
             case 'ping':
                 $this->sendToClient($from, ['type' => 'pong', 'timestamp' => date('Y-m-d H:i:s')]);
                 break;
@@ -83,11 +91,16 @@ class WebSocketHandler implements MessageComponentInterface
         // Видаляємо клієнта з усіх кімнат
         $this->removeClientFromAllRooms($conn);
         
-        // Видаляємо з відстеження кімнат
+        // Видаляємо з відстеження кімнат та імен
         unset($this->clientRooms[$conn->resourceId]);
+        unset($this->clientUsernames[$conn->resourceId]);
         
         // Повідомляємо інших клієнтів
-        $this->broadcastSystemMessage("Клієнт {$conn->resourceId} відключився. Всього клієнтів: " . count($this->clients));
+        $username = $this->clientUsernames[$conn->resourceId] ?? "Користувач {$conn->resourceId}";
+        $this->broadcastSystemMessage("{$username} відключився. Всього клієнтів: " . count($this->clients));
+        
+        // Відправляємо оновлений список користувачів
+        $this->broadcastUsersList();
     }
 
     public function onError(ConnectionInterface $conn, \Exception $e)
@@ -100,6 +113,10 @@ class WebSocketHandler implements MessageComponentInterface
     {
         // Отримуємо поточну кімнату клієнта
         $currentRoom = $this->clientRooms[$from->resourceId] ?? 'general';
+        
+        // Додаємо ім'я користувача до повідомлення
+        $username = $this->clientUsernames[$from->resourceId] ?? "Користувач {$from->resourceId}";
+        $data['username'] = $username;
         
         // Відправляємо повідомлення тільки клієнтам в тій самій кімнаті
         if (isset($this->rooms[$currentRoom])) {
@@ -145,17 +162,22 @@ class WebSocketHandler implements MessageComponentInterface
         ]);
         
         // Повідомляємо інших учасників кімнати
+        $username = $this->clientUsernames[$client->resourceId] ?? "Користувач {$client->resourceId}";
         foreach ($this->rooms[$roomName] as $roomClient) {
             if ($roomClient !== $client) {
                 $this->sendToClient($roomClient, [
                     'type' => 'user_joined_room',
                     'room' => $roomName,
                     'user' => $client->resourceId,
-                    'message' => "Користувач {$client->resourceId} приєднався до кімнати",
+                    'username' => $username,
+                    'message' => "{$username} приєднався до кімнати",
                     'timestamp' => date('Y-m-d H:i:s')
                 ]);
             }
         }
+        
+        // Відправляємо оновлений список користувачів
+        $this->broadcastUsersList();
     }
 
     protected function handleLeaveRoom(ConnectionInterface $client, $data)
@@ -234,6 +256,68 @@ class WebSocketHandler implements MessageComponentInterface
         
         // Видаляємо з відстеження кімнат
         unset($this->clientRooms[$client->resourceId]);
+    }
+
+    protected function handleSetUsername(ConnectionInterface $client, $data)
+    {
+        $username = $data['username'] ?? '';
+        
+        if ($username) {
+            $this->clientUsernames[$client->resourceId] = $username;
+            
+            // Повідомляємо клієнта про успішне встановлення імені
+            $this->sendToClient($client, [
+                'type' => 'username_set',
+                'username' => $username,
+                'message' => "Ім'я встановлено: {$username}",
+                'timestamp' => date('Y-m-d H:i:s')
+            ]);
+            
+            // Відправляємо оновлений список користувачів всім клієнтам
+            $this->broadcastUsersList();
+        }
+    }
+
+    protected function handleGetUsers(ConnectionInterface $client, $data)
+    {
+        $users = [];
+        foreach ($this->clients as $c) {
+            $username = $this->clientUsernames[$c->resourceId] ?? "Користувач {$c->resourceId}";
+            $users[] = [
+                'id' => $c->resourceId,
+                'username' => $username,
+                'room' => $this->clientRooms[$c->resourceId] ?? 'general'
+            ];
+        }
+        
+        $this->sendToClient($client, [
+            'type' => 'users_list',
+            'users' => $users,
+            'timestamp' => date('Y-m-d H:i:s')
+        ]);
+    }
+
+    protected function broadcastUsersList()
+    {
+        $users = [];
+        foreach ($this->clients as $client) {
+            $username = $this->clientUsernames[$client->resourceId] ?? "Користувач {$client->resourceId}";
+            $users[] = [
+                'id' => $client->resourceId,
+                'username' => $username,
+                'room' => $this->clientRooms[$client->resourceId] ?? 'general'
+            ];
+        }
+        
+        $data = [
+            'type' => 'users_list',
+            'users' => $users,
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+        
+        foreach ($this->clients as $client) {
+            $this->sendToClient($client, $data);
+        }
     }
 
     public function getConnectedClientsCount()

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-// import { FiPower, FaPowerOff, FiTrash2, FiRefreshCw } from 'react-icons/fi';
 import { LuPowerOff } from 'react-icons/lu'
 import { MdOutlineConnectWithoutContact } from "react-icons/md";
 import { FaTrash } from 'react-icons/fa'
@@ -18,7 +17,6 @@ const WEBSOCKET_URL = 'ws://localhost:8080';
 
 function App() {
   const [currentRoom, setCurrentRoom] = useState('general');
-  const [users, setUsers] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
   
@@ -28,13 +26,15 @@ function App() {
     error,
     currentRoom: wsCurrentRoom, // Отримуємо поточну кімнату з хука
     username,
+    users, // Отримуємо список реальних користувачів
     setUsername,
     connect,
     disconnect,
     sendMessage,
     sendPrivateMessage,
     joinRoom,
-    clearMessages
+    clearMessages,
+    getUsers
   } = useWebSocket(WEBSOCKET_URL);
 
   // Функція для встановлення імені користувача з повідомленням
@@ -74,25 +74,12 @@ function App() {
     }
   };
 
-  // Simulate users (for demo purposes)
+  // Отримуємо список користувачів при підключенні
   useEffect(() => {
     if (isConnected) {
-      const interval = setInterval(() => {
-        if (Math.random() < 0.1) {
-          const newUserId = Math.floor(Math.random() * 1000);
-          setUsers(prev => {
-            const existingUser = prev.find(u => u.id === newUserId);
-            if (!existingUser) {
-              return [...prev, { id: newUserId }];
-            }
-            return prev;
-          });
-        }
-      }, 5000);
-
-      return () => clearInterval(interval);
+      getUsers();
     }
-  }, [isConnected]);
+  }, [isConnected, getUsers]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-600 via-secondary-600 to-primary-800 p-4">

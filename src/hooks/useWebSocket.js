@@ -8,12 +8,23 @@ export const useWebSocket = (url) => {
   const [username, setUsername] = useState(() => {
     return localStorage.getItem('chatUsername') || '';
   });
+  const [users, setUsers] = useState([]); // Додаємо список реальних користувачів
   const socketRef = useRef(null);
 
   const setUsernameWithStorage = useCallback((newUsername) => {
     setUsername(newUsername);
     localStorage.setItem('chatUsername', newUsername);
-  }, []);
+    
+    // Відправляємо ім'я на сервер
+    if (socketRef.current && isConnected) {
+      const data = {
+        type: 'set_username',
+        username: newUsername,
+        timestamp: new Date().toISOString()
+      };
+      socketRef.current.send(JSON.stringify(data));
+    }
+  }, [isConnected]);
 
   const connect = useCallback(() => {
     try {
@@ -41,6 +52,12 @@ export const useWebSocket = (url) => {
                 ? { ...msg, deliveryStatus: data.status }
                 : msg
             ));
+          } else if (data.type === 'users_list') {
+            // Оновлюємо список користувачів
+            setUsers(data.users || []);
+          } else if (data.type === 'username_set') {
+            // Ім'я користувача встановлено
+            console.log('Username set:', data.username);
           } else {
             setMessages(prev => [...prev, {
               id: Date.now(),
@@ -191,6 +208,16 @@ export const useWebSocket = (url) => {
     setMessages([]);
   }, []);
 
+  const getUsers = useCallback(() => {
+    if (socketRef.current && isConnected) {
+      const data = {
+        type: 'get_users',
+        timestamp: new Date().toISOString()
+      };
+      socketRef.current.send(JSON.stringify(data));
+    }
+  }, [isConnected]);
+
   useEffect(() => {
     return () => {
       if (socketRef.current) {
@@ -205,6 +232,7 @@ export const useWebSocket = (url) => {
     error,
     currentRoom, // Експортуємо поточну кімнату
     username, // Експортуємо ім'я користувача
+    users, // Експортуємо список користувачів
     setUsername: setUsernameWithStorage, // Експортуємо функцію для встановлення імені з збереженням
     connect,
     disconnect,
@@ -213,6 +241,7 @@ export const useWebSocket = (url) => {
     joinRoom,
     leaveRoom,
     ping,
-    clearMessages
+    clearMessages,
+    getUsers
   };
 }; 
