@@ -42,7 +42,7 @@ const UsersList = ({ users = [], onSendPrivateMessage }) => {
               <div className="w-2 h-2 bg-green-400 rounded-full"></div>
               <div className="flex-1">
                 <div className="text-sm font-medium">
-                  {user.username || `Користувач ${user.id}`}
+                  {user.username}
                 </div>
                 {user.room && (
                   <div className="text-xs text-white/60">
@@ -71,7 +71,7 @@ const UsersList = ({ users = [], onSendPrivateMessage }) => {
         >
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">
-              Приватне повідомлення до {users.find(u => u.id === selectedUser)?.username || selectedUser}
+              Приватне повідомлення до {selectedUser}
             </span>
             <button
               onClick={() => setSelectedUser('')}

@@ -38,7 +38,7 @@ class UserManager
         foreach ($clients as $client) {
             $username = $this->getUsername($client);
             $users[] = [
-                'id' => $client->resourceId,
+                'id' => $username, // Використовуємо ім'я як ID
                 'username' => $username
             ];
         }

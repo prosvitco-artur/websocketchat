@@ -39,6 +39,23 @@ export const useWebSocket = (url) => {
           content: '✅ З\'єднання встановлено!',
           timestamp: new Date().toISOString()
         }]);
+        
+        // Автоматично відправляємо збережене ім'я користувача
+        if (username) {
+          const data = {
+            type: 'set_username',
+            username: username,
+            timestamp: new Date().toISOString()
+          };
+          socketRef.current.send(JSON.stringify(data));
+        }
+        
+        // Отримуємо список користувачів
+        setTimeout(() => {
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            getUsers();
+          }
+        }, 1000); // Невелика затримка для встановлення імені
       };
 
       socketRef.current.onmessage = (event) => {
@@ -58,6 +75,8 @@ export const useWebSocket = (url) => {
           } else if (data.type === 'username_set') {
             // Ім'я користувача встановлено
             console.log('Username set:', data.username);
+            // Отримуємо оновлений список користувачів
+            getUsers();
           } else {
             setMessages(prev => [...prev, {
               id: Date.now(),

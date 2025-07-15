@@ -140,12 +140,13 @@ class MessageHandler
 
     protected function handlePrivateMessage(ConnectionInterface $from, $data)
     {
-        $targetId = $data['to'] ?? null;
+        $targetUsername = $data['to'] ?? null;
         $recipient = null;
         
-        if ($targetId) {
+        if ($targetUsername) {
             foreach ($this->clients as $client) {
-                if ($client->resourceId == $targetId) {
+                $clientUsername = $this->userManager->getUsername($client);
+                if ($clientUsername === $targetUsername) {
                     $recipient = $client;
                     break;
                 }
@@ -153,12 +154,13 @@ class MessageHandler
         }
         
         if ($recipient) {
+            $fromUsername = $this->userManager->getUsername($from);
             return [
                 'type' => 'private_message',
                 'recipient' => $recipient,
                 'data' => [
                     'type' => 'private_message',
-                    'from' => $from->resourceId,
+                    'from' => $fromUsername,
                     'content' => $data['content'],
                     'timestamp' => date('Y-m-d H:i:s')
                 ],
@@ -197,10 +199,13 @@ class MessageHandler
     {
         $users = $this->userManager->getAllUsers($this->clients);
         
+        // Додаємо інформацію про кімнати для кожного користувача
         foreach ($users as &$user) {
+            // Знаходимо клієнта за іменем
             $userClient = null;
             foreach ($this->clients as $c) {
-                if ($c->resourceId == $user['id']) {
+                $clientUsername = $this->userManager->getUsername($c);
+                if ($clientUsername === $user['username']) {
                     $userClient = $c;
                     break;
                 }

@@ -42,7 +42,7 @@ class WebSocketHandler implements MessageComponentInterface
         ]);
 
         // Відправляємо інформацію про кількість підключених клієнтів
-        $this->broadcastSystemMessage("Клієнт {$conn->resourceId} підключився. Всього клієнтів: " . count($this->clients));
+        $this->broadcastSystemMessage("Новий користувач підключився. Всього клієнтів: " . count($this->clients));
     }
 
     public function onMessage(ConnectionInterface $from, $msg)
@@ -72,7 +72,11 @@ class WebSocketHandler implements MessageComponentInterface
         $this->userManager->removeUser($conn);
         
         $username = $this->userManager->getUsername($conn);
-        $this->broadcastSystemMessage("{$username} відключився. Всього клієнтів: " . count($this->clients));
+        if ($username && $username !== "Користувач {$conn->resourceId}") {
+            $this->broadcastSystemMessage("{$username} відключився. Всього клієнтів: " . count($this->clients));
+        } else {
+            $this->broadcastSystemMessage("Користувач відключився. Всього клієнтів: " . count($this->clients));
+        }
         
         $this->broadcastUsersList();
     }
@@ -149,10 +153,11 @@ class WebSocketHandler implements MessageComponentInterface
         
         // Додаємо інформацію про кімнати для кожного користувача
         foreach ($users as &$user) {
-            // Знаходимо клієнта за ID
+            // Знаходимо клієнта за іменем
             $userClient = null;
             foreach ($this->clients as $c) {
-                if ($c->resourceId == $user['id']) {
+                $clientUsername = $this->userManager->getUsername($c);
+                if ($clientUsername === $user['username']) {
                     $userClient = $c;
                     break;
                 }
