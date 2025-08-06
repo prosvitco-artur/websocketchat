@@ -13,7 +13,7 @@ import RoomSelector from './components/RoomSelector';
 import UsersList from './components/UsersList';
 import UserNameInput from './components/UserNameInput';
 
-const WEBSOCKET_URL = 'ws://localhost:8080';
+const WEBSOCKET_URL = 'wss://natural-inserted-dress-steady.trycloudflare.com';
 
 function App() {
   const [currentRoom, setCurrentRoom] = useState('general');
