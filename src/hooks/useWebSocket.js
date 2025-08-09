@@ -4,18 +4,16 @@ export const useWebSocket = (url) => {
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
-  const [currentRoom, setCurrentRoom] = useState('general');
   const [username, setUsername] = useState(() => {
     return localStorage.getItem('chatUsername') || '';
   });
-  const [users, setUsers] = useState([]); // Додаємо список реальних користувачів
+  const [users, setUsers] = useState([]);
   const socketRef = useRef(null);
 
   const setUsernameWithStorage = useCallback((newUsername) => {
     setUsername(newUsername);
     localStorage.setItem('chatUsername', newUsername);
     
-    // Відправляємо ім'я на сервер
     if (socketRef.current && isConnected) {
       const data = {
         type: 'set_username',
@@ -27,6 +25,7 @@ export const useWebSocket = (url) => {
   }, [isConnected]);
 
   const connect = useCallback(() => {
+    console.log('connect');
     try {
       socketRef.current = new WebSocket(url);
       
@@ -40,7 +39,6 @@ export const useWebSocket = (url) => {
           timestamp: new Date().toISOString()
         }]);
         
-        // Автоматично відправляємо збережене ім'я користувача
         if (username) {
           const data = {
             type: 'set_username',
@@ -50,32 +48,28 @@ export const useWebSocket = (url) => {
           socketRef.current.send(JSON.stringify(data));
         }
         
-        // Отримуємо список користувачів
         setTimeout(() => {
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             getUsers();
           }
-        }, 1000); // Невелика затримка для встановлення імені
+        }, 1000);
       };
 
       socketRef.current.onmessage = (event) => {
+        console.log('onmessage');
         try {
           const data = JSON.parse(event.data);
           
           if (data.type === 'delivery_status') {
-            // Оновлюємо статус доставки для конкретного повідомлення
             setMessages(prev => prev.map(msg => 
               msg.id === data.messageId 
                 ? { ...msg, deliveryStatus: data.status }
                 : msg
             ));
           } else if (data.type === 'users_list') {
-            // Оновлюємо список користувачів
             setUsers(data.users || []);
           } else if (data.type === 'username_set') {
-            // Ім'я користувача встановлено
             console.log('Username set:', data.username);
-            // Отримуємо оновлений список користувачів
             getUsers();
           } else {
             setMessages(prev => [...prev, {
@@ -130,14 +124,12 @@ export const useWebSocket = (url) => {
         type,
         content: message,
         messageId,
-        room: currentRoom, // Додаємо інформацію про кімнату
-        username: username, // Додаємо ім'я користувача
+        username: username,
         timestamp: new Date().toISOString()
       };
       
       socketRef.current.send(JSON.stringify(data));
       
-      // Додаємо повідомлення відправника з індикатором доставки
       setMessages(prev => [...prev, {
         id: messageId,
         type: 'own',
@@ -150,7 +142,7 @@ export const useWebSocket = (url) => {
       return true;
     }
     return false;
-  }, [isConnected, currentRoom, username]); // Додаємо username в залежності
+  }, [isConnected, username]);
 
   const sendPrivateMessage = useCallback((message, targetId) => {
     if (socketRef.current && isConnected) {
@@ -190,7 +182,6 @@ export const useWebSocket = (url) => {
       };
       
       socketRef.current.send(JSON.stringify(data));
-      setCurrentRoom(roomName); // Оновлюємо поточну кімнату
       return true;
     }
     return false;
@@ -249,7 +240,6 @@ export const useWebSocket = (url) => {
     isConnected,
     messages,
     error,
-    currentRoom, // Експортуємо поточну кімнату
     username, // Експортуємо ім'я користувача
     users, // Експортуємо список користувачів
     setUsername: setUsernameWithStorage, // Експортуємо функцію для встановлення імені з збереженням
