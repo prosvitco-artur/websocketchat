@@ -34,36 +34,6 @@ const Message = ({ message }) => {
     }
   };
 
-  const getDeliveryStatusIcon = () => {
-    if (message.type !== 'own') return null;
-    
-    switch (message.deliveryStatus) {
-      case 'sending':
-        return '⏳';
-      case 'delivered':
-        return '✅';
-      case 'failed':
-        return '❌';
-      default:
-        return '⏳';
-    }
-  };
-
-  const getDeliveryStatusColor = () => {
-    if (message.type !== 'own') return '';
-    
-    switch (message.deliveryStatus) {
-      case 'sending':
-        return 'text-yellow-400';
-      case 'delivered':
-        return 'text-green-400';
-      case 'failed':
-        return 'text-red-400';
-      default:
-        return 'text-gray-400';
-    }
-  };
-
   const formatTimestamp = (timestamp) => {
     try {
       return format(new Date(timestamp), 'HH:mm', { locale: uk });
@@ -104,9 +74,9 @@ const Message = ({ message }) => {
                   </div>
                 )}
               </div>
-              {message.type === 'own' && (
-                <div className={`text-xs ${getDeliveryStatusColor()}`}>
-                  {getDeliveryStatusIcon()}
+              {message.type === 'own' && message.deliveryStatus && (
+                <div className="text-xs text-gray-400">
+                  {message.deliveryStatus === 'delivered' ? '✅' : '⏳'}
                 </div>
               )}
             </div>
