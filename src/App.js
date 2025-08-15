@@ -8,8 +8,9 @@ import { FaTrash } from 'react-icons/fa'
 import { useWebSocket } from './hooks/useWebSocket';
 import Message from './components/Message';
 import MessageInput from './components/MessageInput';
+import { getWebSocketURL, isGitHubPages } from './config';
 
-const WEBSOCKET_URL = 'ws://localhost:8080';
+const WEBSOCKET_URL = getWebSocketURL();
 
 function App() {
   const messagesEndRef = useRef(null);
@@ -49,6 +50,11 @@ function App() {
             <p className="text-sm text-white/60">
               {messages.length} повідомлень
             </p>
+            {isGitHubPages() && (
+              <p className="text-xs text-blue-400 mt-1">
+                🌐 GitHub Pages
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <motion.button

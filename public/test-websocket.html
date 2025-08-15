@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .error { background: #fff3cd; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 300px; }
+        #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    
+    <div>
+        <label for="wsUrl">WebSocket URL:</label><br>
+        <input type="text" id="wsUrl" value="ws://localhost:8080" placeholder="ws://localhost:8080">
+        <button onclick="connect()">Підключитися</button>
+        <button onclick="disconnect()">Відключитися</button>
+    </div>
+    
+    <div id="status" class="status disconnected">Відключено</div>
+    
+    <div>
+        <input type="text" id="message" placeholder="Введіть повідомлення">
+        <button onclick="sendMessage()">Надіслати</button>
+    </div>
+    
+    <div id="messages"></div>
+    
+    <script>
+        let ws = null;
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        
+        function updateStatus(message, className) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${className}`;
+        }
+        
+        function addMessage(message, type = 'info') {
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            div.style.color = type === 'error' ? 'red' : type === 'sent' ? 'blue' : 'green';
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function connect() {
+            const url = document.getElementById('wsUrl').value;
+            if (!url) {
+                alert('Введіть WebSocket URL');
+                return;
+            }
+            
+            try {
+                ws = new WebSocket(url);
+                
+                ws.onopen = function() {
+                    updateStatus('Підключено', 'connected');
+                    addMessage('✅ З\'єднання встановлено');
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        addMessage(`📨 Отримано: ${JSON.stringify(data)}`);
+                    } catch (e) {
+                        addMessage(`📨 Отримано: ${event.data}`);
+                    }
+                };
+                
+                ws.onclose = function() {
+                    updateStatus('Відключено', 'disconnected');
+                    addMessage('❌ З\'єднання закрито');
+                    ws = null;
+                };
+                
+                ws.onerror = function(error) {
+                    updateStatus('Помилка з\'єднання', 'error');
+                    addMessage(`❌ Помилка: ${error}`, 'error');
+                };
+                
+            } catch (error) {
+                updateStatus('Помилка підключення', 'error');
+                addMessage(`❌ Помилка підключення: ${error}`, 'error');
+            }
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+        
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                alert('Спочатку підключіться до WebSocket');
+                return;
+            }
+            
+            const message = document.getElementById('message').value;
+            if (!message.trim()) {
+                alert('Введіть повідомлення');
+                return;
+            }
+            
+            const data = {
+                type: 'message',
+                content: message,
+                timestamp: new Date().toISOString()
+            };
+            
+            ws.send(JSON.stringify(data));
+            addMessage(`📤 Надіслано: ${JSON.stringify(data)}`, 'sent');
+            document.getElementById('message').value = '';
+        }
+        
+        // Автопідключення при Enter
+        document.getElementById('message').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Тестування різних URL
+        function testUrls() {
+            const urls = [
+                'ws://localhost:8080',
+                'wss://echo.websocket.org',
+                'wss://ws.postman-echo.com/raw'
+            ];
+            
+            urls.forEach(url => {
+                addMessage(`🔗 Тест URL: ${url}`);
+            });
+        }
+        
+        // Запускаємо тест при завантаженні
+        window.onload = function() {
+            addMessage('🚀 Тестовий клієнт завантажено');
+            addMessage('💡 Підказка: використовуйте wss://echo.websocket.org для тестування');
+        };
+    </script>
+</body>
+</html>
