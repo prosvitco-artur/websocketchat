@@ -25,6 +25,8 @@ function App() {
     getUsers
   } = useWebSocket(WEBSOCKET_URL);
 
+  console.log(messages);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);

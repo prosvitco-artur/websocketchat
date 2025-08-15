@@ -29,12 +29,6 @@ export const useWebSocket = (url) => {
       
       socketRef.current.onopen = () => {
         setIsConnected(true);
-        setMessages(prev => [...prev, {
-          id: Date.now(),
-          type: 'system',
-          content: '✅ З\'єднання встановлено!',
-          timestamp: new Date().toISOString()
-        }]);
         
         if (username) {
           const data = {
@@ -68,6 +62,21 @@ export const useWebSocket = (url) => {
           } else if (data.type === 'username_set') {
             console.log('Username set:', data.username);
             getUsers();
+          } else if (data.type === 'system' || data.type === 'connection_status') {
+            // Показуємо тільки системні повідомлення про помилки, не про з'єднання
+            if (data.content && !data.content.includes('З\'єднання встановлено') && !data.content.includes('З\'єднання закрито')) {
+              console.log('Додаємо системне повідомлення:', data.content);
+              setMessages(prev => [...prev, {
+                id: Date.now(),
+                ...data,
+                timestamp: data.timestamp || new Date().toISOString()
+              }]);
+            }
+          } else if (data.type === 'set_username' || data.type === 'get_users' || 
+                     data.type === 'username_set' || data.type === 'users_list' ||
+                     data.type === 'delivery_status') {
+            // Не додаємо технічні повідомлення до списку
+            console.log('Технічне повідомлення ігнорується:', data.type, data);
           } else {
             setMessages(prev => [...prev, {
               id: Date.now(),
@@ -76,6 +85,22 @@ export const useWebSocket = (url) => {
             }]);
           }
         } catch (e) {
+          // Перевіряємо, чи це не технічне повідомлення
+          if (event.data && typeof event.data === 'string') {
+            try {
+              const parsedData = JSON.parse(event.data);
+              if (parsedData.type === 'set_username' || parsedData.type === 'get_users' || 
+                  parsedData.type === 'username_set' || parsedData.type === 'users_list' ||
+                  parsedData.type === 'delivery_status') {
+                console.log('Технічне повідомлення ігнорується в catch:', parsedData.type);
+                return;
+              }
+            } catch (parseError) {
+              // Якщо не вдалося розпарсити, то це не JSON
+            }
+          }
+          
+          // Додаємо тільки якщо це не технічне повідомлення
           setMessages(prev => [...prev, {
             id: Date.now(),
             type: 'message',
@@ -87,21 +112,30 @@ export const useWebSocket = (url) => {
 
       socketRef.current.onclose = () => {
         setIsConnected(false);
-        setMessages(prev => [...prev, {
-          id: Date.now(),
-          type: 'system',
-          content: '❌ З\'єднання закрито',
-          timestamp: new Date().toISOString()
-        }]);
+        // Не показуємо системні повідомлення про закриття з'єднання
       };
 
       socketRef.current.onerror = (error) => {
         setIsConnected(false);
         console.error('WebSocket помилка:', error);
+        // Показуємо помилку користувачу
+        setMessages(prev => [...prev, {
+          id: Date.now(),
+          type: 'system',
+          content: '❌ Помилка з\'єднання з сервером',
+          timestamp: new Date().toISOString()
+        }]);
       };
 
     } catch (error) {
       console.error('Помилка підключення:', error);
+      // Показуємо помилку користувачу
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        type: 'system',
+        content: '❌ Не вдалося підключитися до сервера',
+        timestamp: new Date().toISOString()
+      }]);
     }
   }, [url]);
 
@@ -125,14 +159,14 @@ export const useWebSocket = (url) => {
       
       socketRef.current.send(JSON.stringify(data));
       
-      setMessages(prev => [...prev, {
-        id: messageId,
-        type: 'own',
-        content: message,
-        username: username,
-        timestamp: new Date().toISOString(),
-        deliveryStatus: 'sending' // pending, delivered, failed
-      }]);
+      // setMessages(prev => [...prev, {
+      //   id: messageId,
+      //   type: 'own',
+      //   content: message,
+      //   username: username,
+      //   timestamp: new Date().toISOString(),
+      //   deliveryStatus: 'sending' // pending, delivered, failed
+      // }]);
       
       return true;
     }
